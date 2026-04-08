@@ -38,6 +38,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [stick, setStick] = useState<StickState>({ x: 0, y: 0 })
   const [stickActive, setStickActive] = useState(false)
+  const lookPointerRef = useRef({ x: 0, y: 0 })
 
   const readInput = useCallback((): GameInput => {
     const snapshot = { ...inputRef.current }
@@ -175,25 +176,22 @@ function App() {
   }, [])
 
   const lookPadHandlers = useMemo(() => {
-    let lastX = 0
-    let lastY = 0
-
     const onPointerDown: PointerEventHandler<HTMLDivElement> = (event) => {
       event.currentTarget.setPointerCapture(event.pointerId)
-      lastX = event.clientX
-      lastY = event.clientY
+      lookPointerRef.current.x = event.clientX
+      lookPointerRef.current.y = event.clientY
     }
 
     const onPointerMove: PointerEventHandler<HTMLDivElement> = (event) => {
       if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
         return
       }
-      const dx = event.clientX - lastX
-      const dy = event.clientY - lastY
+      const dx = event.clientX - lookPointerRef.current.x
+      const dy = event.clientY - lookPointerRef.current.y
       inputRef.current.lookX += dx
       inputRef.current.lookY += dy
-      lastX = event.clientX
-      lastY = event.clientY
+      lookPointerRef.current.x = event.clientX
+      lookPointerRef.current.y = event.clientY
     }
 
     const clearCapture: PointerEventHandler<HTMLDivElement> = (event) => {
