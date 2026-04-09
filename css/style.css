@@ -1,0 +1,233 @@
+:root {
+    --primary-yellow: #f4d03f;
+    --ui-bg: rgba(0, 0, 0, 0.4);
+    --ui-border: rgba(255, 255, 255, 0.3);
+    --kill-red: #ff3333;
+}
+
+body {
+    font-family: 'Rajdhani', sans-serif;
+    margin: 0; padding: 0;
+    background-color: #000; color: white;
+    overflow: hidden; position: fixed;
+    width: 100%; height: 100%;
+    user-select: none; -webkit-user-select: none;
+    touch-action: none;
+}
+
+#game-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+#ui-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2;
+    pointer-events: none;
+}
+
+.customizable {
+    position: absolute;
+    pointer-events: auto;
+    touch-action: none;
+}
+
+/* --- ボタンデザイン --- */
+.control-button {
+    width: 60px; height: 60px;
+    background-color: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: 50%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: #eee; backdrop-filter: blur(4px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    transition: transform 0.1s, background-color 0.1s;
+}
+.control-button i { font-size: 24px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.8)); }
+.control-button:active, .control-button.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: scale(0.9); border-color: #fff;
+}
+.btn-label {
+    font-size: 10px; font-weight: 700; color: var(--primary-yellow);
+    margin-top: -2px; letter-spacing: 1px;
+}
+
+/* 射撃ボタン */
+#shoot-btn {
+    width: 85px; height: 85px;
+    background: rgba(244, 208, 63, 0.15);
+    border: 2px solid rgba(244, 208, 63, 0.6);
+    color: var(--primary-yellow);
+}
+#shoot-btn i { font-size: 32px; color: var(--primary-yellow); }
+#shoot-btn:active, #shoot-btn.active {
+    background: rgba(244, 208, 63, 0.4);
+    box-shadow: 0 0 15px rgba(244, 208, 63, 0.5);
+}
+#shoot-btn::before {
+    content: ''; position: absolute; width: 100%; height: 100%;
+    border-radius: 50%; border: 1px dashed rgba(244, 208, 63, 0.4);
+    animation: spin 8s linear infinite; pointer-events: none;
+}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* リロードボタン */
+#reload-btn.reloading {
+    border-color: var(--kill-red); color: var(--kill-red);
+    animation: pulse 0.8s infinite;
+}
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+/* ジョイスティック */
+#joystick-area { width: 160px; height: 160px; }
+#joystick-base {
+    position: absolute; top: 50%; left: 50%;
+    width: 80px; height: 80px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none; display: none;
+}
+#joystick-stick {
+    position: absolute; top: 50%; left: 50%;
+    width: 30px; height: 30px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none; display: none;
+    box-shadow: 0 0 5px rgba(255,255,255,0.5);
+}
+
+/* HUD */
+#hud {
+    display: flex; align-items: flex-end; justify-content: flex-end;
+    background: linear-gradient(90deg, transparent, rgba(0,0,0,0.7));
+    padding: 8px 20px;
+    border-right: 4px solid var(--primary-yellow);
+    transform: skewX(-15deg);
+}
+.hud-content {
+    transform: skewX(15deg); display: flex; align-items: center; gap: 15px;
+}
+.weapon-icon { font-size: 24px; color: #ccc; opacity: 0.8; }
+.ammo-info { text-align: right; line-height: 0.9; }
+#ammo-count {
+    font-family: 'Oswald', sans-serif; font-size: 42px; color: #fff;
+    text-shadow: 0 0 10px rgba(0,0,0,0.5);
+}
+#ammo-reserve { font-size: 18px; color: #bbb; font-weight: 700; }
+#ammo-count.low { color: var(--kill-red); }
+
+/* ダメージログ */
+#damage-log {
+    position: absolute; width: 250px;
+    font-size: 14px; font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    pointer-events: none; z-index: 5;
+    display: flex; flex-direction: column-reverse;
+    text-shadow: 1px 1px 0 #000; gap: 2px;
+}
+.log-entry {
+    background: linear-gradient(90deg, rgba(0,0,0,0.5), transparent);
+    padding: 2px 8px; border-left: 3px solid #ccc;
+    animation: slideIn 0.2s;
+}
+.log-entry.kill { border-left-color: var(--kill-red); background: linear-gradient(90deg, rgba(150,0,0,0.3), transparent); }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+/* レティクル & マーカー */
+#reticle-container {
+    position: fixed; top: 50%; left: 50%;
+    width: 0; height: 0; transform: translate(-50%, -50%);
+    z-index: 3; pointer-events: none;
+    display: flex; justify-content: center; align-items: center;
+}
+#reticle-dot {
+    width: 4px; height: 4px; background-color: #0f0; border-radius: 50%;
+    box-shadow: 0 0 2px #000; transition: opacity 0.1s;
+}
+.crosshair {
+    position: absolute; background-color: rgba(255,255,255,0.9);
+    transition: transform 0.1s;
+}
+.ch-top, .ch-bottom { width: 2px; height: 8px; }
+.ch-left, .ch-right { width: 8px; height: 2px; }
+.ch-top { transform: translateY(-8px); }
+.ch-bottom { transform: translateY(8px); }
+.ch-left { transform: translateX(-8px); }
+.ch-right { transform: translateX(8px); }
+
+.ads #reticle-dot, .ads .crosshair { opacity: 0; }
+
+.spread .ch-top { transform: translateY(-14px); }
+.spread .ch-bottom { transform: translateY(14px); }
+.spread .ch-left { transform: translateX(-14px); }
+.spread .ch-right { transform: translateX(14px); }
+
+#hit-marker {
+    position: absolute; width: 40px; height: 40px;
+    opacity: 0; transition: opacity 0.1s; pointer-events: none;
+}
+#hit-marker::before, #hit-marker::after {
+    content: ''; position: absolute; top: 50%; left: 50%;
+    width: 20px; height: 3px; background: #fff;
+    border-radius: 1px; box-shadow: 0 0 2px #000;
+}
+#hit-marker::before { transform: translate(-50%, -50%) rotate(45deg); }
+#hit-marker::after { transform: translate(-50%, -50%) rotate(-45deg); }
+#hit-marker.hit { opacity: 1; transform: scale(1.2); }
+#hit-marker.kill::before, #hit-marker.kill::after { background: var(--kill-red); }
+
+/* 設定 & カスタマイズ */
+#settings-btn {
+    position: fixed; top: 15px; right: 20px;
+    width: 40px; height: 40px;
+    background: rgba(0,0,0,0.5); border: 1px solid #aaa;
+    color: #fff; z-index: 20; border-radius: 4px; pointer-events: auto;
+}
+
+#customize-overlay {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 100;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    color: white; backdrop-filter: blur(5px); pointer-events: auto;
+}
+.edit-panel {
+    background: #222; padding: 20px; border-radius: 4px;
+    border-top: 3px solid var(--primary-yellow);
+    text-align: center; width: 320px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+}
+.sliders { margin: 15px 0; display: flex; flex-direction: column; gap: 10px; }
+.buttons button {
+    padding: 10px 20px; border: none; border-radius: 2px;
+    font-weight: bold; cursor: pointer; text-transform: uppercase; margin: 0 5px;
+}
+
+/* カスタマイズモード時のスタイル */
+.customize-mode .customizable {
+    border: 2px dashed var(--primary-yellow);
+    background-color: rgba(244, 208, 63, 0.2);
+    cursor: move; z-index: 101;
+}
+.customize-mode .customizable.selected {
+    border: 2px solid #0f0; background-color: rgba(0, 255, 0, 0.3); z-index: 200;
+}
+
+.customize-mode #damage-log {
+    pointer-events: auto;
+    border: 2px dashed #ffff00;
+    background-color: rgba(255, 255, 0, 0.2);
+    min-height: 80px;
+    min-width: 200px;
+    justify-content: center;
+    align-items: center;
+}
+.customize-mode #damage-log::before {
+    content: "DAMAGE LOG AREA";
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+    letter-spacing: 2px;
+}
