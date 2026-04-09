@@ -447,6 +447,6 @@ export class FpsGame {
     this.rightHand.position.y = RIGHT_HAND_BASE.y + bobY - this.handSwayY * HAND_SWAY_Y_POSITION_FACTOR
     this.rightHand.rotation.x = HAND_BASE_ROTATION_X - this.handSwayY * HAND_SWAY_ROTATION_X_FACTOR
     this.rightHand.rotation.y = -HAND_BASE_ROTATION_Y + this.handSwayX * HAND_SWAY_ROTATION_Y_FACTOR
-    this.rightHand.rotation.z = HAND_BASE_ROTATION_Z - this.handSwayX * HAND_SWAY_ROTATION_Z_FACTOR
+    this.rightHand.rotation.z = HAND_BASE_ROTATION_Z + this.handSwayX * HAND_SWAY_ROTATION_Z_FACTOR
   }
 }
