@@ -1,7 +1,8 @@
 .app {
   position: relative;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: #0b1117;
 }
@@ -26,7 +27,7 @@
 
 .hud {
   position: absolute;
-  top: 12px;
+  top: calc(12px + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   pointer-events: none;
@@ -59,16 +60,16 @@
 .controls-left,
 .controls-right {
   position: absolute;
-  bottom: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
   pointer-events: none;
 }
 
 .controls-left {
-  left: 18px;
+  left: calc(18px + env(safe-area-inset-left));
 }
 
 .controls-right {
-  right: 18px;
+  right: calc(18px + env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
   gap: 10px;
