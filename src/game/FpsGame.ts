@@ -27,8 +27,17 @@ type InputReader = () => GameInput
 
 const PLAYER_HEIGHT = 1.8
 const PLAYER_RADIUS = 0.3
+const HAND_BASE_ROTATION_X = 0.2
+const HAND_BASE_ROTATION_Y = 0.22
+const HAND_BASE_ROTATION_Z = 0.04
 const LEFT_HAND_BASE = new Vector3(-0.22, -0.28, 0.42)
 const RIGHT_HAND_BASE = new Vector3(0.22, -0.28, 0.42)
+const HAND_SWAY_SENSITIVITY = 0.00095
+const HAND_SWAY_X_POSITION_FACTOR = 0.2
+const HAND_SWAY_Y_POSITION_FACTOR = 0.35
+const HAND_SWAY_ROTATION_X_FACTOR = 1.3
+const HAND_SWAY_ROTATION_Y_FACTOR = 1.45
+const HAND_SWAY_ROTATION_Z_FACTOR = 1.3
 
 export class FpsGame {
   private readonly canvas: HTMLCanvasElement
@@ -355,7 +364,11 @@ export class FpsGame {
     const hand = new TransformNode(`${side}-hand`, scene)
     hand.parent = parent
     hand.position.copyFrom(side === 'left' ? LEFT_HAND_BASE : RIGHT_HAND_BASE)
-    hand.rotation = new Vector3(0.2, sign * 0.22, sign * 0.04)
+    hand.rotation = new Vector3(
+      HAND_BASE_ROTATION_X,
+      sign * HAND_BASE_ROTATION_Y,
+      sign * HAND_BASE_ROTATION_Z,
+    )
 
     const palm = MeshBuilder.CreateBox(
       `${side}-palm`,
@@ -417,22 +430,23 @@ export class FpsGame {
     const bobX = Math.sin(this.handBobTime) * bobAmount
     const bobY = Math.cos(this.handBobTime * 2) * bobAmount * 0.45
 
-    const targetSwayX = Scalar.Clamp(-input.lookX * 0.00095, -0.05, 0.05)
-    const targetSwayY = Scalar.Clamp(input.lookY * 0.00095, -0.05, 0.05)
+    const targetSwayX = Scalar.Clamp(-input.lookX * HAND_SWAY_SENSITIVITY, -0.05, 0.05)
+    const targetSwayY = Scalar.Clamp(input.lookY * HAND_SWAY_SENSITIVITY, -0.05, 0.05)
     const swayBlend = Scalar.Clamp(18 * dt, 0, 1)
     this.handSwayX = Scalar.Lerp(this.handSwayX, targetSwayX, swayBlend)
     this.handSwayY = Scalar.Lerp(this.handSwayY, targetSwayY, swayBlend)
 
-    this.leftHand.position.x = LEFT_HAND_BASE.x + bobX - this.handSwayX * 0.2
-    this.leftHand.position.y = LEFT_HAND_BASE.y + bobY - this.handSwayY * 0.35
-    this.leftHand.rotation.x = 0.2 - this.handSwayY * 1.3
-    this.leftHand.rotation.y = 0.22 + this.handSwayX * 1.45
-    this.leftHand.rotation.z = -0.04 - this.handSwayX * 1.3
+    this.leftHand.position.x = LEFT_HAND_BASE.x + bobX - this.handSwayX * HAND_SWAY_X_POSITION_FACTOR
+    this.leftHand.position.y = LEFT_HAND_BASE.y + bobY - this.handSwayY * HAND_SWAY_Y_POSITION_FACTOR
+    this.leftHand.rotation.x = HAND_BASE_ROTATION_X - this.handSwayY * HAND_SWAY_ROTATION_X_FACTOR
+    this.leftHand.rotation.y = HAND_BASE_ROTATION_Y + this.handSwayX * HAND_SWAY_ROTATION_Y_FACTOR
+    this.leftHand.rotation.z = -HAND_BASE_ROTATION_Z - this.handSwayX * HAND_SWAY_ROTATION_Z_FACTOR
 
-    this.rightHand.position.x = RIGHT_HAND_BASE.x - bobX - this.handSwayX * 0.2
-    this.rightHand.position.y = RIGHT_HAND_BASE.y + bobY - this.handSwayY * 0.35
-    this.rightHand.rotation.x = 0.2 - this.handSwayY * 1.3
-    this.rightHand.rotation.y = -0.22 + this.handSwayX * 1.45
-    this.rightHand.rotation.z = 0.04 - this.handSwayX * 1.3
+    this.rightHand.position.x =
+      RIGHT_HAND_BASE.x - bobX - this.handSwayX * HAND_SWAY_X_POSITION_FACTOR
+    this.rightHand.position.y = RIGHT_HAND_BASE.y + bobY - this.handSwayY * HAND_SWAY_Y_POSITION_FACTOR
+    this.rightHand.rotation.x = HAND_BASE_ROTATION_X - this.handSwayY * HAND_SWAY_ROTATION_X_FACTOR
+    this.rightHand.rotation.y = -HAND_BASE_ROTATION_Y + this.handSwayX * HAND_SWAY_ROTATION_Y_FACTOR
+    this.rightHand.rotation.z = HAND_BASE_ROTATION_Z - this.handSwayX * HAND_SWAY_ROTATION_Z_FACTOR
   }
 }
