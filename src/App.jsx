@@ -19,8 +19,10 @@ import { weaponConfig } from './config/weapon';
 import { operatorConfig } from './config/operator';
 
 const LOG_DURATION = 3000;
+const HIT_MARKER_DURATION = 100;
 const UI_SETTINGS_KEY = 'fpsDemoUISettings_v10';
 const SPEED_LIMITS = { min: 0.6, max: 1.25 };
+const PLAYER_COLLIDER_RADIUS = 0.35;
 
 const defaultUiSettings = {
   damageLog: { left: '20px', top: '40%', right: 'auto', bottom: 'auto', scale: 1, opacity: 1 },
@@ -95,6 +97,7 @@ function App() {
     fireMode: 0,
   });
   const [logs, setLogs] = useState([]);
+  const [hitMarker, setHitMarker] = useState('');
   const [spread, setSpread] = useState(false);
   const [customizeMode, setCustomizeMode] = useState(false);
   const [uiSettings, setUiSettings] = useState(() => {
@@ -110,6 +113,7 @@ function App() {
   const [selectedUiId, setSelectedUiId] = useState(null);
   const [joystick, setJoystick] = useState(emptyJoystick);
   const dragRef = useRef(null);
+  const hitMarkerTimerRef = useRef(null);
 
   const selectedSettings = selectedUiId ? uiSettings[selectedUiId] : null;
 
@@ -206,6 +210,28 @@ function App() {
       if (killed) {
         resetTarget(rootNode);
       }
+
+      if (hitMarkerTimerRef.current) {
+        clearTimeout(hitMarkerTimerRef.current);
+      }
+      setHitMarker(killed ? 'kill' : 'hit');
+      hitMarkerTimerRef.current = window.setTimeout(() => {
+        setHitMarker('');
+      }, HIT_MARKER_DURATION);
+      g.timers.push(hitMarkerTimerRef.current);
+
+      const hitMat = pick.pickedMesh.material;
+      if (hitMat?.diffuseColor) {
+        const oldColor = hitMat.diffuseColor.clone();
+        hitMat.diffuseColor = new Color3(1, 1, 1);
+        const flashTimer = window.setTimeout(() => {
+          if (hitMat) {
+            hitMat.diffuseColor = oldColor;
+          }
+        }, 50);
+        g.timers.push(flashTimer);
+      }
+
       pushLog(part, distance, damage, killed);
     }
 
@@ -368,6 +394,20 @@ function App() {
 
     sceneRef.current = scene;
 
+    const checkCollision = (position) =>
+      g.obstacles.some((obstacle) => {
+        if (obstacle.name === 'ground') return false;
+        const box = obstacle.getBoundingInfo().boundingBox;
+        const min = box.minimumWorld;
+        const max = box.maximumWorld;
+        return (
+          position.x + PLAYER_COLLIDER_RADIUS > min.x &&
+          position.x - PLAYER_COLLIDER_RADIUS < max.x &&
+          position.z + PLAYER_COLLIDER_RADIUS > min.z &&
+          position.z - PLAYER_COLLIDER_RADIUS < max.z
+        );
+      });
+
     engine.runRenderLoop(() => {
       const delta = engine.getDeltaTime() / 1000;
       const nowMs = performance.now();
@@ -404,8 +444,10 @@ function App() {
           .add(moveDirForward.scale(g.moveVector.y * speed * delta))
           .add(moveDirRight.scale(g.moveVector.x * speed * delta));
         next.y = operatorConfig.height;
-        g.camera.position.copyFrom(next);
-        g.walkTime += delta;
+        if (!checkCollision(next)) {
+          g.camera.position.copyFrom(next);
+          g.walkTime += delta;
+        }
       }
 
       const visualPos = g.isADS ? weaponConfig.visuals.adsPos : weaponConfig.visuals.hipPos;
@@ -711,6 +753,7 @@ function App() {
         <div className="crosshair ch-bottom" />
         <div className="crosshair ch-left" />
         <div className="crosshair ch-right" />
+        <div id="hit-marker" className={hitMarker ? `show ${hitMarker}` : ''} />
       </div>
 
       {customizeMode && (

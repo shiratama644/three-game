@@ -275,6 +275,47 @@
   opacity: 0;
 }
 
+#hit-marker {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  opacity: 0;
+  transform: scale(1);
+  transition: opacity 0.1s, transform 0.1s;
+}
+
+#hit-marker::before,
+#hit-marker::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 3px;
+  background: #fff;
+  border-radius: 1px;
+  transform-origin: center;
+  box-shadow: 0 0 2px #000;
+}
+
+#hit-marker::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+#hit-marker::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+#hit-marker.show {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+#hit-marker.kill::before,
+#hit-marker.kill::after {
+  background: var(--kill-red);
+}
+
 #customize-overlay {
   position: fixed;
   inset: 0;
