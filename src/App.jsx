@@ -20,6 +20,9 @@ import { operatorConfig } from './config/operator';
 
 const LOG_DURATION = 3000;
 const HIT_MARKER_DURATION = 100;
+const STREAK_RESET_MS = 4000;
+const STREAK_FLASH_MS = 900;
+const HUD_SYNC_MS = 80;
 const UI_SETTINGS_KEY = 'fpsDemoUISettings_v10';
 const SPEED_LIMITS = { min: 0.6, max: 1.25 };
 const PLAYER_COLLIDER_RADIUS = 0.35;
@@ -96,7 +99,13 @@ function App() {
     isReloading: false,
     isADS: false,
     sprintWanted: false,
+    isSprinting: false,
+    wasSprinting: false,
+    sprintEnergy: 1,
     sprintStopAt: 0,
+    lastHudSyncAt: 0,
+    lastHudSprintEnergy: 1,
+    killStreak: 0,
     reloadStartAt: 0,
     weaponParts: {
       mag: null,
@@ -120,6 +129,9 @@ function App() {
   const [logs, setLogs] = useState([]);
   const [hitMarker, setHitMarker] = useState('');
   const [spread, setSpread] = useState(false);
+  const [sprintEnergy, setSprintEnergy] = useState(1);
+  const [killStreak, setKillStreak] = useState(0);
+  const [streakFlash, setStreakFlash] = useState(false);
   const [customizeMode, setCustomizeMode] = useState(false);
   const [uiSettings, setUiSettings] = useState(() => {
     try {
@@ -135,6 +147,8 @@ function App() {
   const [joystick, setJoystick] = useState(emptyJoystick);
   const dragRef = useRef(null);
   const hitMarkerTimerRef = useRef(null);
+  const streakResetTimerRef = useRef(null);
+  const streakFlashTimerRef = useRef(null);
 
   const selectedSettings = selectedUiId ? uiSettings[selectedUiId] : null;
 
@@ -207,7 +221,7 @@ function App() {
 
     const spreadSettings = g.isADS
       ? weaponConfig.stats.spread.ads
-      : g.sprintWanted
+      : g.isSprinting
         ? weaponConfig.stats.spread.sprint
         : weaponConfig.stats.spread.hip;
 
@@ -230,6 +244,18 @@ function App() {
       rootNode.metadata.hp -= damage;
       const killed = rootNode.metadata.hp <= 0;
       if (killed) {
+        g.killStreak += 1;
+        setKillStreak(g.killStreak);
+        setStreakFlash(true);
+        if (streakFlashTimerRef.current) clearTimeout(streakFlashTimerRef.current);
+        streakFlashTimerRef.current = window.setTimeout(() => setStreakFlash(false), STREAK_FLASH_MS);
+        g.timers.push(streakFlashTimerRef.current);
+        if (streakResetTimerRef.current) clearTimeout(streakResetTimerRef.current);
+        streakResetTimerRef.current = window.setTimeout(() => {
+          g.killStreak = 0;
+          setKillStreak(0);
+        }, STREAK_RESET_MS);
+        g.timers.push(streakResetTimerRef.current);
         resetTarget(rootNode);
       }
 
@@ -280,7 +306,7 @@ function App() {
     }
 
     if (g.isReloading) return;
-    if (!g.sprintWanted && nowMs - g.sprintStopAt < weaponConfig.stats.sprintToFireTime) return;
+    if (!g.isSprinting && nowMs - g.sprintStopAt < weaponConfig.stats.sprintToFireTime) return;
 
     if (g.fireMode === 0) {
       if (nowMs - g.lastShotAt >= weaponConfig.stats.fireInterval) shoot(nowMs);
@@ -473,8 +499,17 @@ function App() {
       const moving = moveMag > 0.01;
       if (!moving && g.sprintWanted) {
         g.sprintWanted = false;
-        g.sprintStopAt = nowMs;
       }
+      const canUseSprint = moving && g.sprintWanted && !g.isADS;
+      if (canUseSprint && g.sprintEnergy > 0.02) {
+        g.sprintEnergy = clamp(g.sprintEnergy - delta / 4, 0, 1);
+        g.isSprinting = true;
+      } else {
+        g.isSprinting = false;
+        g.sprintEnergy = clamp(g.sprintEnergy + delta / 2, 0, 1);
+      }
+      if (g.wasSprinting && !g.isSprinting) g.sprintStopAt = nowMs;
+      g.wasSprinting = g.isSprinting;
 
       const moveDirForward = g.camera.getDirection(Axis.Z);
       moveDirForward.y = 0;
@@ -485,7 +520,7 @@ function App() {
 
       const speed = g.isADS
         ? g.finalSpeeds.ads
-        : g.sprintWanted
+        : g.isSprinting
           ? g.finalSpeeds.sprint
           : g.finalSpeeds.walk;
 
@@ -505,7 +540,7 @@ function App() {
       g.weaponNode.position = Vector3.Lerp(g.weaponNode.position, new Vector3(visualPos.x, visualPos.y, visualPos.z - g.recoil.z), delta * 12);
       g.camera.fov += (toRad(adsFov) - g.camera.fov) * clamp(delta * 12, 0, 1);
 
-      const bobScale = moving ? (g.sprintWanted ? 1.6 : 1) : 0;
+      const bobScale = moving ? (g.isSprinting ? 1.6 : 1) : 0;
       const bobY = Math.sin(g.walkTime * weaponConfig.visuals.bobSpeed) * weaponConfig.visuals.bobAmount * bobScale;
       g.weaponNode.position.y += bobY;
       g.weaponNode.rotation.x += ((g.isReloading ? -0.1 : 0) - g.weaponNode.rotation.x) * clamp(delta * 8, 0, 1);
@@ -558,6 +593,13 @@ function App() {
       g.recoil.x *= Math.exp(-delta * weaponConfig.stats.recoil.recover);
       g.recoil.y *= Math.exp(-delta * weaponConfig.stats.recoil.recover);
       g.recoil.z *= Math.exp(-delta * weaponConfig.visuals.slideSpeed);
+      if (nowMs - g.lastHudSyncAt > HUD_SYNC_MS) {
+        if (Math.abs(g.lastHudSprintEnergy - g.sprintEnergy) > 0.01) {
+          g.lastHudSprintEnergy = g.sprintEnergy;
+          setSprintEnergy(g.sprintEnergy);
+        }
+        g.lastHudSyncAt = nowMs;
+      }
 
       handleShooting(nowMs);
       scene.render();
@@ -570,6 +612,8 @@ function App() {
       window.removeEventListener('resize', handleResize);
       g.logsTimeouts.forEach((timeout) => clearTimeout(timeout));
       g.timers.forEach((timeout) => clearTimeout(timeout));
+      if (streakResetTimerRef.current) clearTimeout(streakResetTimerRef.current);
+      if (streakFlashTimerRef.current) clearTimeout(streakFlashTimerRef.current);
       engine.dispose();
       sceneRef.current = null;
     };
@@ -852,6 +896,10 @@ function App() {
               <span className="ammo-reserve">/{hud.reserveAmmo}</span>
             </div>
             <div className="hud-state">{hud.isADS ? 'ADS' : 'HIP'} • {modeLabel}</div>
+            <div className="stamina-meter">
+              <div className="stamina-fill" style={{ width: `${Math.round(sprintEnergy * 100)}%` }} />
+            </div>
+            <div className={`streak-indicator${streakFlash ? ' hot' : ''}`}>STREAK ×{killStreak}</div>
           </div>
         </div>
 

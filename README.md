@@ -1,16 +1,26 @@
-# React + Vite
+# three-game (Babylon.js FPS)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Babylon.js で構築したモバイル向けFPSデモです。
 
-Currently, two official plugins are available:
+## 進化ポイント
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- 旧版相当のジョイスティックスプリント判定（角度/フリック/維持）
+- リロード時の手・マガジン連動アニメーション
+- ヒットマーカー＋部位フラッシュ＋ダメージログ
+- **スタミナ制スプリント**（走り続けると減少、停止で回復）
+- **キルストリーク表示**（一定時間でリセット）
 
-## React Compiler
+## セットアップ（pnpm）
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+pnpm install
+```
 
-## Expanding the ESLint configuration
+## 開発コマンド
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+pnpm dev
+pnpm lint
+pnpm build
+pnpm preview
+```
