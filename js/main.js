@@ -24,6 +24,7 @@ const playerBox = new THREE.Box3();
 const obstacleBox = new THREE.Box3();
 const playerSize = new THREE.Vector3(0.8, 2.0, 0.8);
 const LOG_DISPLAY_DURATION = 3000;
+const UI_SETTINGS_STORAGE_KEY = 'fpsDemoUISettings_v9';
 
 // --- LOADED CONFIGURATIONS ---
 let weaponConfig = null;   
@@ -347,15 +348,15 @@ function updateShells(delta) {
 // Bind DOM events and Touch listeners
 function setupEvents() {
     const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
-    dom.settingsBtn.addEventListener('touchstart', (e) => { stop(e); toggleCustomizeMode(true); }, {passive:false});
-    dom.settingsBtn.addEventListener('click', (e) => { stop(e); toggleCustomizeMode(true); });
+    const bindPressAction = (btn, handler) => {
+        btn.addEventListener('touchstart', (e) => { stop(e); handler(); }, { passive: false });
+        btn.addEventListener('click', (e) => { stop(e); handler(); });
+    };
 
-    dom.saveBtn.addEventListener('touchstart', (e) => { stop(e); saveUISettings(); });
-    dom.saveBtn.addEventListener('click', (e) => { stop(e); saveUISettings(); });
-    dom.cancelBtn.addEventListener('touchstart', (e) => { stop(e); toggleCustomizeMode(false); });
-    dom.cancelBtn.addEventListener('click', (e) => { stop(e); toggleCustomizeMode(false); });
-    dom.resetBtn.addEventListener('touchstart', (e) => { stop(e); resetUISettings(); });
-    dom.resetBtn.addEventListener('click', (e) => { stop(e); resetUISettings(); });
+    bindPressAction(dom.settingsBtn, () => toggleCustomizeMode(true));
+    bindPressAction(dom.saveBtn, saveUISettings);
+    bindPressAction(dom.cancelBtn, () => toggleCustomizeMode(false));
+    bindPressAction(dom.resetBtn, resetUISettings);
 
     const sliderHandler = (callback) => (e) => { e.stopPropagation(); if (selectedElement) callback(e.target.value); };
     dom.sizeSlider.addEventListener('input', sliderHandler((val) => { selectedElement.style.transform = `scale(${val})`; selectedElement.dataset.scale = val; }));
@@ -939,7 +940,7 @@ function onCustomizeTouchEnd(e) { if (!isCustomizeMode || !dragTarget) return; f
 function backupDefaultSettings() { document.querySelectorAll('.customizable').forEach(el => { const s = window.getComputedStyle(el); defaultSettings[el.dataset.id] = { left: s.left, top: s.top, right: s.right, bottom: s.bottom, transform: 'scale(1.0)', opacity: '1.0' }; }); }
 function saveUISettings() {
     const s = {}; document.querySelectorAll('.customizable').forEach(el => s[el.dataset.id] = { left: el.style.left, top: el.style.top, scale: el.dataset.scale||1.0, opacity: el.dataset.opacity||1.0 });
-    localStorage.setItem('fpsDemoUISettings_v9', JSON.stringify(s)); toggleCustomizeMode(false);
+    localStorage.setItem(UI_SETTINGS_STORAGE_KEY, JSON.stringify(s)); toggleCustomizeMode(false);
 }
 function applyElementSettings(el, s) {
     if (s.left && s.left !== 'auto') { el.style.left = s.left; el.style.right = 'auto'; }
@@ -949,10 +950,10 @@ function applyElementSettings(el, s) {
     if (s.scale) { el.style.transform = `scale(${s.scale})`; el.dataset.scale = s.scale; }
     if (s.opacity) { el.style.opacity = s.opacity; el.dataset.opacity = s.opacity; }
 }
-function loadUISettings() { try { const s = JSON.parse(localStorage.getItem('fpsDemoUISettings_v9')); if(s) document.querySelectorAll('.customizable').forEach(el => { if(s[el.dataset.id]) applyElementSettings(el, s[el.dataset.id]); }); } catch(e){} }
+function loadUISettings() { try { const s = JSON.parse(localStorage.getItem(UI_SETTINGS_STORAGE_KEY)); if(s) document.querySelectorAll('.customizable').forEach(el => { if(s[el.dataset.id]) applyElementSettings(el, s[el.dataset.id]); }); } catch(e){} }
 function resetUISettings() {
     document.querySelectorAll('.customizable').forEach(el => { const d = defaultSettings[el.dataset.id]; if(d) { el.style.left = d.left; el.style.top = d.top; el.style.right = d.right; el.style.bottom = d.bottom; el.style.transform = d.transform; el.style.opacity = d.opacity; el.dataset.scale=1.0; el.dataset.opacity=1.0; } });
-    localStorage.removeItem('fpsDemoUISettings_v9');
+    localStorage.removeItem(UI_SETTINGS_STORAGE_KEY);
 }
 
 init();
