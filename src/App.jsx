@@ -23,6 +23,16 @@ const HIT_MARKER_DURATION = 100;
 const UI_SETTINGS_KEY = 'fpsDemoUISettings_v10';
 const SPEED_LIMITS = { min: 0.6, max: 1.25 };
 const PLAYER_COLLIDER_RADIUS = 0.35;
+const JOYSTICK_CONFIG = {
+  maxRadius: 50,
+  sprintRadius: 120,
+  sprintThreshold: 140,
+  sprintAngle: 35,
+  velocityThreshold: 0.99,
+  quickFlickMs: 250,
+  quickFlickDist: 30,
+  maintainRatio: 0.8,
+};
 
 const defaultUiSettings = {
   damageLog: { left: '20px', top: '40%', right: 'auto', bottom: 'auto', scale: 1, opacity: 1 },
@@ -53,6 +63,8 @@ const emptyJoystick = {
   baseY: 0,
   stickX: 0,
   stickY: 0,
+  startAt: 0,
+  sprinting: false,
 };
 
 function App() {
@@ -85,6 +97,15 @@ function App() {
     isADS: false,
     sprintWanted: false,
     sprintStopAt: 0,
+    reloadStartAt: 0,
+    weaponParts: {
+      mag: null,
+      leftArm: null,
+      magBasePos: null,
+      magBaseRot: null,
+      armBasePos: null,
+      armBaseRot: null,
+    },
     finalSpeeds: { walk: 0, sprint: 0, ads: 0 },
     timers: [],
   });
@@ -152,6 +173,7 @@ function App() {
     const g = gameRef.current;
     if (g.isReloading || g.reserveAmmo <= 0 || g.ammo === weaponConfig.stats.magSize) return;
     g.isReloading = true;
+    g.reloadStartAt = performance.now();
     if (g.isADS) {
       g.isADS = false;
     }
@@ -382,6 +404,26 @@ function App() {
     barrel.position = new Vector3(0, 0.02, -0.45);
     barrel.material = bodyMat;
 
+    const grip = MeshBuilder.CreateBox('weapon-grip', { width: 0.07, height: 0.18, depth: 0.1 }, scene);
+    grip.parent = weaponNode;
+    grip.position = new Vector3(0, -0.12, 0.2);
+    grip.rotation.x = -0.2;
+    grip.material = bodyMat;
+
+    const mag = MeshBuilder.CreateBox('weapon-mag', { width: 0.08, height: 0.25, depth: 0.12 }, scene);
+    mag.parent = weaponNode;
+    mag.position = new Vector3(0, -0.15, 0.05);
+    mag.rotation.x = 0.2;
+    mag.material = bodyMat;
+
+    const leftArm = MeshBuilder.CreateBox('weapon-left-arm', { width: 0.09, height: 0.09, depth: 1.1 }, scene);
+    leftArm.parent = weaponNode;
+    leftArm.position = new Vector3(-0.21, -0.02, 0.2);
+    leftArm.rotation = new Vector3(0, -0.4, 0.3);
+    const armMat = new StandardMaterial('weapon-arm-mat', scene);
+    armMat.diffuseColor = new Color3(0.92, 0.73, 0.6);
+    leftArm.material = armMat;
+
     const muzzleNode = new TransformNode('muzzle', scene);
     muzzleNode.parent = weaponNode;
     muzzleNode.position = new Vector3(0, 0.02, -0.7);
@@ -391,6 +433,14 @@ function App() {
     g.camera = camera;
     g.weaponNode = weaponNode;
     g.muzzleNode = muzzleNode;
+    g.weaponParts = {
+      mag,
+      leftArm,
+      magBasePos: mag.position.clone(),
+      magBaseRot: mag.rotation.clone(),
+      armBasePos: leftArm.position.clone(),
+      armBaseRot: leftArm.rotation.clone(),
+    };
 
     sceneRef.current = scene;
 
@@ -458,6 +508,50 @@ function App() {
       const bobScale = moving ? (g.sprintWanted ? 1.6 : 1) : 0;
       const bobY = Math.sin(g.walkTime * weaponConfig.visuals.bobSpeed) * weaponConfig.visuals.bobAmount * bobScale;
       g.weaponNode.position.y += bobY;
+      g.weaponNode.rotation.x += ((g.isReloading ? -0.1 : 0) - g.weaponNode.rotation.x) * clamp(delta * 8, 0, 1);
+
+      const { mag, leftArm, magBasePos, magBaseRot, armBasePos, armBaseRot } = g.weaponParts;
+      if (mag && leftArm && magBasePos && magBaseRot && armBasePos && armBaseRot) {
+        if (g.isReloading) {
+          const reloadDuration = g.ammo === 0 ? weaponConfig.stats.emptyReloadTime : weaponConfig.stats.reloadTime;
+          const progress = clamp((nowMs - g.reloadStartAt) / reloadDuration, 0, 1);
+          const magDropPos = new Vector3(0, -1.0, 0.2);
+          const armGripPos = new Vector3(-0.2, -0.2, 0.5);
+
+          if (progress < 0.2) {
+            const t = progress / 0.2;
+            leftArm.position = Vector3.Lerp(armBasePos, armGripPos, t);
+            leftArm.rotation.x = armBaseRot.x + (0.2 - armBaseRot.x) * t;
+          } else if (progress < 0.5) {
+            const t = (progress - 0.2) / 0.3;
+            mag.position = Vector3.Lerp(magBasePos, magDropPos, t * t);
+            const currentMagMove = mag.position.subtract(magBasePos);
+            leftArm.position = armGripPos.clone().add(currentMagMove);
+            leftArm.rotation.x = 0.2;
+          } else if (progress < 0.85) {
+            const t = (progress - 0.5) / 0.35;
+            mag.position = Vector3.Lerp(magDropPos, magBasePos, Math.sqrt(t));
+            const currentMagMove = mag.position.subtract(magBasePos);
+            leftArm.position = armGripPos.clone().add(currentMagMove);
+            leftArm.rotation.x = 0.2;
+          } else if (progress < 1) {
+            const t = (progress - 0.85) / 0.15;
+            mag.position = magBasePos.clone();
+            leftArm.position = Vector3.Lerp(armGripPos, armBasePos, t);
+            leftArm.rotation.x = 0.2 + (armBaseRot.x - 0.2) * t;
+          } else {
+            mag.position = magBasePos.clone();
+            mag.rotation = magBaseRot.clone();
+            leftArm.position = armBasePos.clone();
+            leftArm.rotation = armBaseRot.clone();
+          }
+        } else {
+          mag.position = magBasePos.clone();
+          mag.rotation = magBaseRot.clone();
+          leftArm.position = armBasePos.clone();
+          leftArm.rotation = armBaseRot.clone();
+        }
+      }
 
       g.camera.rotation.x -= g.recoil.x * delta * weaponConfig.stats.recoil.recover;
       g.camera.rotation.y -= g.recoil.y * delta * weaponConfig.stats.recoil.recover * 0.4;
@@ -560,7 +654,7 @@ function App() {
     const rect = event.currentTarget.getBoundingClientRect();
     const baseX = event.clientX - rect.left;
     const baseY = event.clientY - rect.top;
-    setJoystick({ active: true, pointerId: event.pointerId, baseX, baseY, stickX: baseX, stickY: baseY });
+    setJoystick({ active: true, pointerId: event.pointerId, baseX, baseY, stickX: baseX, stickY: baseY, startAt: performance.now(), sprinting: false });
   };
 
   const moveJoystick = (event) => {
@@ -572,17 +666,35 @@ function App() {
     const dx = currentX - joystick.baseX;
     const dy = currentY - joystick.baseY;
     const dist = Math.hypot(dx, dy);
-    const limit = 50;
-    const scale = dist > limit ? limit / dist : 1;
-    const clampedX = joystick.baseX + dx * scale;
-    const clampedY = joystick.baseY + dy * scale;
-
-    setJoystick((prev) => ({ ...prev, stickX: clampedX, stickY: clampedY }));
-
+    const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+    let angleDiff = Math.abs(angleDeg - (-90));
+    if (angleDiff > 180) angleDiff = 360 - angleDiff;
+    const isInSprintZone = angleDiff <= JOYSTICK_CONFIG.sprintAngle;
+    const timeDelta = performance.now() - joystick.startAt;
+    const isQuickFlick = timeDelta < JOYSTICK_CONFIG.quickFlickMs
+      && dist > JOYSTICK_CONFIG.quickFlickDist
+      && (dist / Math.max(timeDelta, 1)) > JOYSTICK_CONFIG.velocityThreshold;
+    const isDeepPush = dist > JOYSTICK_CONFIG.sprintThreshold;
+    const maintainThreshold = JOYSTICK_CONFIG.maxRadius * JOYSTICK_CONFIG.maintainRatio;
     const g = gameRef.current;
-    g.moveVector.x = clamp((clampedX - joystick.baseX) / limit, -1, 1);
-    g.moveVector.y = clamp((joystick.baseY - clampedY) / limit, -1, 1);
-    g.sprintWanted = dist > 38;
+    if (g.sprintWanted) {
+      g.sprintWanted = isInSprintZone && dist > maintainThreshold;
+    } else {
+      g.sprintWanted = isInSprintZone && (isDeepPush || isQuickFlick);
+    }
+
+    const visualLimit = isInSprintZone ? JOYSTICK_CONFIG.sprintRadius : JOYSTICK_CONFIG.maxRadius;
+    const visualScale = dist > visualLimit ? visualLimit / dist : 1;
+    const visualX = joystick.baseX + dx * visualScale;
+    const visualY = joystick.baseY + dy * visualScale;
+
+    setJoystick((prev) => ({ ...prev, stickX: visualX, stickY: visualY, sprinting: g.sprintWanted }));
+
+    const moveScale = dist > JOYSTICK_CONFIG.maxRadius ? JOYSTICK_CONFIG.maxRadius / dist : 1;
+    const moveX = dx * moveScale;
+    const moveY = dy * moveScale;
+    g.moveVector.x = clamp(moveX / JOYSTICK_CONFIG.maxRadius, -1, 1);
+    g.moveVector.y = clamp(-moveY / JOYSTICK_CONFIG.maxRadius, -1, 1);
   };
 
   const endJoystick = (event) => {
@@ -676,7 +788,7 @@ function App() {
             {joystick.active && (
               <>
                 <div id="joystick-base" style={{ left: joystick.baseX, top: joystick.baseY }} />
-                <div id="joystick-stick" style={{ left: joystick.stickX, top: joystick.stickY }} />
+                <div id="joystick-stick" style={{ left: joystick.stickX, top: joystick.stickY, backgroundColor: joystick.sprinting ? 'rgba(244, 208, 63, 0.85)' : 'rgba(255, 255, 255, 0.85)' }} />
               </>
             )}
           </div>
