@@ -1,89 +1,13 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Modern Mobile FPS (Enhanced)</title>
-    
-    <!-- 外部ライブラリ (アイコン・フォント) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
-    
-    <!-- CSSファイルの読み込み -->
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-    <canvas id="game-canvas"></canvas>
-
-    <div id="ui-container">
-        <!-- ダメージログ -->
-        <div id="damage-log" class="customizable" data-id="damage-log" style="left: 20px; top: 40%;"></div>
-
-        <!-- ジョイスティック -->
-        <div id="joystick-area" class="customizable" data-id="joystick" style="left: 40px; bottom: 40px;">
-            <div id="joystick-base"></div>
-            <div id="joystick-stick"></div>
-        </div>
-        
-        <div id="mode-btn" class="control-button customizable" data-id="mode-btn" style="right: 170px; bottom: 30px; width: 45px; height: 45px;">
-            <i class="fa-solid fa-infinity" id="mode-icon" style="font-size: 18px;"></i>
-            <span class="btn-label" id="mode-text" style="font-size: 8px;">AUTO</span>
-        </div>
-
-        <div id="ads-btn" class="control-button customizable" data-id="ads-btn" style="right: 140px; bottom: 90px;">
-            <i class="fa-solid fa-crosshairs"></i>
-        </div>
-        
-        <div id="reload-btn" class="control-button customizable" data-id="reload-btn" style="right: 40px; bottom: 150px;">
-            <i class="fa-solid fa-rotate"></i>
-        </div>
-        
-        <div id="shoot-btn" class="control-button customizable" data-id="shoot-btn" style="right: 30px; bottom: 40px;">
-            <i class="fa-solid fa-bullseye"></i>
-        </div>
-        
-        <div id="hud" class="customizable" data-id="hud" style="right: 0; bottom: 120px;">
-            <div class="hud-content">
-                <i class="fa-solid fa-person-rifle weapon-icon"></i>
-                <div class="ammo-info">
-                    <div id="ammo-count">30</div>
-                    <div id="ammo-reserve">120</div>
-                </div>
-            </div>
-        </div>
-
-        <button id="settings-btn"><i class="fa-solid fa-gear"></i></button>
-
-        <div id="customize-overlay">
-            <div class="edit-panel">
-                <h3 style="margin:0 0 15px; font-family:'Oswald'; color:#f4d03f;">UI CUSTOMIZE</h3>
-                <p style="font-size: 12px; color: #aaa;">DRAG TO MOVE / SELECT TO EDIT</p>
-                <div class="sliders">
-                    <label>SIZE <input type="range" id="size-slider" min="0.5" max="2.0" step="0.1" value="1.0"></label>
-                    <label>OPACITY <input type="range" id="opacity-slider" min="0.0" max="1.0" step="0.1" value="1.0"></label>
-                </div>
-                <div class="buttons" style="margin-top: 20px;">
-                    <button id="customize-reset-btn" style="background:#c0392b; color:#fff;">RESET</button>
-                    <button id="customize-save-btn" style="background:#27ae60; color:#fff;">SAVE</button>
-                    <button id="customize-cancel-btn" style="background:#7f8c8d; color:#fff;">CLOSE</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div id="reticle-container">
-        <div id="hit-marker"></div>
-        <div id="reticle-dot"></div>
-        <div class="crosshair ch-top"></div>
-        <div class="crosshair ch-bottom"></div>
-        <div class="crosshair ch-left"></div>
-        <div class="crosshair ch-right"></div>
-    </div>
-
-    <!-- Three.js 本体 (r128) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
-    <!-- メインスクリプト (moduleとして読み込み) -->
-    <script type="module" src="js/main.js"></script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>three-game</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

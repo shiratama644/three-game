@@ -1,0 +1,48 @@
+export const weaponConfig = {
+  name: 'AK-47',
+  stats: {
+    multipliers: { head: 1.55, arm: 1.0, chest: 1.1, belly: 1.0, leg: 1.0 },
+    damageRanges: [
+      { maxDist: 20, damage: 33 },
+      { maxDist: 30, damage: 26 },
+      { maxDist: 55, damage: 23 },
+      { maxDist: 60, damage: 21 },
+    ],
+    fireInterval: 110,
+    adsTime: 250,
+    sprintToFireTime: 160,
+    reloadTime: 1420,
+    emptyReloadTime: 1630,
+    magSize: 30,
+    maxAmmo: 120,
+    spread: {
+      hip: { x: 0.1, y: 0.1 },
+      ads: { x: 0.002, y: 0.002 },
+      sprint: { x: 0.25, y: 0.25 },
+    },
+    recoil: {
+      kick: 0.1,
+      rise: 0.015,
+      recover: 15.0,
+      kickZ: 0.12,
+    },
+  },
+  mobility: {
+    walk: -0.05,
+    sprint: -0.05,
+    ads: -0.1,
+  },
+  visuals: {
+    hipPos: { x: 0.25, y: -0.1, z: -0.55 },
+    adsPos: { x: 0.0, y: -0.1044, z: -0.6 },
+    hipFov: 90,
+    adsFov: 50,
+    swayAmount: 0.03,
+    swaySmooth: 8,
+    bobAmount: 0.03,
+    bobSpeed: 14,
+    recoilShake: 0.005,
+    slideTravel: 0.08,
+    slideSpeed: 20,
+  },
+};
