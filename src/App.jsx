@@ -97,23 +97,21 @@ function App() {
   const [logs, setLogs] = useState([]);
   const [spread, setSpread] = useState(false);
   const [customizeMode, setCustomizeMode] = useState(false);
-  const [uiSettings, setUiSettings] = useState(defaultUiSettings);
+  const [uiSettings, setUiSettings] = useState(() => {
+    try {
+      const raw = localStorage.getItem(UI_SETTINGS_KEY);
+      if (!raw) return defaultUiSettings;
+      const parsed = JSON.parse(raw);
+      return { ...defaultUiSettings, ...parsed };
+    } catch {
+      return defaultUiSettings;
+    }
+  });
   const [selectedUiId, setSelectedUiId] = useState(null);
   const [joystick, setJoystick] = useState(emptyJoystick);
   const dragRef = useRef(null);
 
   const selectedSettings = selectedUiId ? uiSettings[selectedUiId] : null;
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(UI_SETTINGS_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      setUiSettings((prev) => ({ ...prev, ...parsed }));
-    } catch {
-      setUiSettings(defaultUiSettings);
-    }
-  }, []);
 
   const saveHud = () => {
     const g = gameRef.current;
@@ -439,7 +437,7 @@ function App() {
       engine.dispose();
       sceneRef.current = null;
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const modeLabel = useMemo(() => {
     if (hud.fireMode === 1) return 'SEMI';
@@ -719,7 +717,7 @@ function App() {
         <div id="customize-overlay">
           <div className="edit-panel">
             <h3>UI CUSTOMIZE</h3>
-            <p>ドラッグして移動。選択した要素を編集。</p>
+            <p>Drag to move. Select an element to edit.</p>
             <label>
               SIZE
               <input
