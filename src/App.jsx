@@ -671,6 +671,7 @@ function App() {
     if (angleDiff > 180) angleDiff = 360 - angleDiff;
     const isInSprintZone = angleDiff <= JOYSTICK_CONFIG.sprintAngle;
     const timeDelta = performance.now() - joystick.startAt;
+    // 旧版のチューニング値を維持するため、ここは px/ms で判定する。
     const isQuickFlick = timeDelta < JOYSTICK_CONFIG.quickFlickMs
       && dist > JOYSTICK_CONFIG.quickFlickDist
       && (dist / Math.max(timeDelta, 1)) > JOYSTICK_CONFIG.velocityThreshold;
